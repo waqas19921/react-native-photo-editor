@@ -278,21 +278,12 @@ open class PhotoEditorActivity : AppCompatActivity(), OnPhotoEditorListener, Vie
     return Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
   }
 
+  @SuppressLint("MissingPermission")
   private fun saveImage() {
     val fileName = System.currentTimeMillis().toString() + ".png"
-    val hasStoragePermission = ContextCompat.checkSelfPermission(
-      this,
-      Manifest.permission.WRITE_EXTERNAL_STORAGE
-    ) == PackageManager.PERMISSION_GRANTED
-    if (hasStoragePermission || isSdkHigherThan28()) {
+//    if (isSdkHigherThan28()) {
       showLoading("Saving...")
-      val path: File = Environment.getExternalStoragePublicDirectory(
-        Environment.DIRECTORY_PICTURES
-      )
-      val file = File(path, fileName)
-      path.mkdirs()
-
-      mPhotoEditor!!.saveAsFile(file.absolutePath, object : OnSaveListener {
+      mPhotoEditor!!.saveAsFile(getTmpDir() + fileName, object : OnSaveListener {
         override fun onSuccess(@NonNull imagePath: String) {
           hideLoading()
           val intent = Intent()
@@ -303,23 +294,17 @@ open class PhotoEditorActivity : AppCompatActivity(), OnPhotoEditorListener, Vie
 
         override fun onFailure(@NonNull exception: Exception) {
           hideLoading()
-          if (!hasStoragePermission) {
-            requestPer()
-          } else {
-            mPhotoEditorView?.let {
-              val snackBar = Snackbar.make(
-                it, R.string.save_error,
-                Snackbar.LENGTH_SHORT)
-              snackBar.setBackgroundTint(Color.WHITE)
-              snackBar.setActionTextColor(Color.BLACK)
-              snackBar.setAction("Ok", null).show()
-            }
+          mPhotoEditorView?.let {
+            val snackBar = Snackbar.make(
+              it, R.string.save_error,
+              Snackbar.LENGTH_SHORT)
+            snackBar.setBackgroundTint(Color.WHITE)
+            snackBar.setActionTextColor(Color.BLACK)
+            snackBar.setAction("Ok", null).show()
           }
         }
       })
-    } else {
-      requestPer()
-    }
+//    }
   }
 
   private fun requestPer() {
@@ -457,7 +442,7 @@ open class PhotoEditorActivity : AppCompatActivity(), OnPhotoEditorListener, Vie
   override fun onCropFinish(result: UCropResult) {
     when (result.mResultCode) {
       RESULT_OK -> {
-        var resultUri = UCrop.getOutput(result.mResultData);
+        var resultUri = UCrop.getOutput(result.mResultData)
         Log.d(TAG, "Handle Crop result: " + resultUri.toString())
         val bitmap: Bitmap = MediaStore.Images.Media.getBitmap(this.contentResolver, resultUri)
         mPhotoEditorView?.source?.setImageBitmap(bitmap);
