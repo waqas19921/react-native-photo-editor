@@ -8,6 +8,7 @@ package com.reactnativephotoeditor.activity.tools;
 public enum ToolType {
   SHAPE,
   ERASER,
+  CROP,
   FILTER,
   TEXT,
   STICKER

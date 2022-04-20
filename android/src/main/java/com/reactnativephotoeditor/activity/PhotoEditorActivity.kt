@@ -9,9 +9,11 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.drawable.Drawable
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
+import android.provider.MediaStore
 import android.util.Log
 import android.view.View
 import android.view.Window
@@ -28,6 +30,7 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.fragment.app.FragmentActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.transition.ChangeBounds
@@ -52,11 +55,15 @@ import ja.burhanrashid52.photoeditor.PhotoEditor.OnSaveListener
 import ja.burhanrashid52.photoeditor.shape.ShapeBuilder
 import ja.burhanrashid52.photoeditor.shape.ShapeType
 import java.io.File
+import com.yalantis.ucrop.UCrop
+import com.yalantis.ucrop.UCropFragment
+import com.yalantis.ucrop.UCropFragment.UCropResult
+import com.yalantis.ucrop.UCropFragmentCallback
 
 
 open class PhotoEditorActivity : AppCompatActivity(), OnPhotoEditorListener, View.OnClickListener,
   PropertiesBSFragment.Properties, ShapeBSFragment.Properties, StickerListener,
-  OnItemSelected, FilterListener {
+  OnItemSelected, FilterListener, UCropFragmentCallback {
   private var mPhotoEditor: PhotoEditor? = null
   private var mProgressDialog: ProgressDialog? = null
   private var mPhotoEditorView: PhotoEditorView? = null
@@ -72,6 +79,8 @@ open class PhotoEditorActivity : AppCompatActivity(), OnPhotoEditorListener, Vie
   private var mRootView: ConstraintLayout? = null
   private val mConstraintSet = ConstraintSet()
   private var mIsFilterVisible = false
+  private var imgPath: String? = ""
+  private var cropFragment: UCropFragment? = null
 
   @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
   override fun onCreate(savedInstanceState: Bundle?) {
@@ -83,6 +92,7 @@ open class PhotoEditorActivity : AppCompatActivity(), OnPhotoEditorListener, Vie
     //intern
     val value = intent.extras
     val path = value?.getString("path")
+    imgPath = path
     val stickers =
       value?.getStringArrayList("stickers")?.plus(
         assets.list("Stickers")!!
@@ -248,10 +258,18 @@ open class PhotoEditorActivity : AppCompatActivity(), OnPhotoEditorListener, Vie
         mPhotoEditor!!.redo()
       }
       R.id.btnSave -> {
-        saveImage()
+        if (cropFragment != null) {
+          cropFragment?.cropAndSaveImage();
+        } else {
+          saveImage()
+        }
       }
       R.id.imgClose -> {
-        onBackPressed()
+        if (cropFragment != null) {
+          removeCropFromScreen()
+        } else {
+          onBackPressed()
+        }
       }
     }
   }
@@ -369,6 +387,19 @@ open class PhotoEditorActivity : AppCompatActivity(), OnPhotoEditorListener, Vie
           mTxtCurrentTool!!.setText(R.string.label_text)
         }
       }
+      ToolType.CROP -> {
+        var destinationFileName: String = "SampleCropImage.jpg"
+
+        var uCrop: UCrop? = UCrop.of(Uri.fromFile(File(imgPath)), Uri.fromFile(File(getTmpDir(), destinationFileName)))
+
+//                uCrop = basisConfig(uCrop)
+//                uCrop = advancedConfig(uCrop)
+        cropFragment = uCrop?.getFragment(uCrop.getIntent(this).extras)
+        supportFragmentManager.beginTransaction()
+          .add(R.id.fragment_container, cropFragment!!, UCropFragment.TAG)
+          .commitAllowingStateLoss()
+        hideAll()
+      }
       ToolType.ERASER -> {
         mPhotoEditor!!.brushEraser()
         mTxtCurrentTool!!.setText(R.string.label_eraser_mode)
@@ -381,11 +412,74 @@ open class PhotoEditorActivity : AppCompatActivity(), OnPhotoEditorListener, Vie
     }
   }
 
+  open fun hideAll() {
+    mPhotoEditorView!!.visibility = View.GONE
+    mRvTools!!.visibility = View.GONE
+    findViewById<ImageView>(R.id.imgRedo)!!.visibility = View.GONE
+    findViewById<ImageView>(R.id.imgUndo)!!.visibility = View.GONE
+  }
+
+  open fun showAll() {
+    mPhotoEditorView!!.visibility = View.VISIBLE
+    mRvTools!!.visibility = View.VISIBLE
+    findViewById<ImageView>(R.id.imgRedo)!!.visibility = View.VISIBLE
+    findViewById<ImageView>(R.id.imgUndo)!!.visibility = View.VISIBLE
+  }
+
+  open fun getTmpDir(): String? {
+    val tmpDir = "$cacheDir/react-native-photo-editor"
+    File(tmpDir).mkdir()
+    return tmpDir
+  }
+
+  open fun handleCropError(result: Intent) {
+    val cropError = UCrop.getError(result)
+    if (cropError != null) {
+      Log.e(TAG, "handleCropError: ", cropError)
+//      Toast.makeText(this@SampleActivity, cropError.message, Toast.LENGTH_LONG).show()
+    } else {
+//      Toast.makeText(this@SampleActivity, R.string.toast_unexpected_error, Toast.LENGTH_SHORT).show()
+    }
+  }
+
+  open fun removeCropFromScreen() {
+    supportFragmentManager.beginTransaction()
+      .remove(cropFragment!!)
+      .commit()
+    cropFragment = null
+    showAll()
+  }
+
+  override fun loadingProgress(showLoader: Boolean) {
+    Log.d(TAG, "Loading triggered.")
+  }
+
+  override fun onCropFinish(result: UCropResult) {
+    when (result.mResultCode) {
+      RESULT_OK -> {
+        var resultUri = UCrop.getOutput(result.mResultData);
+        Log.d(TAG, "Handle Crop result: " + resultUri.toString())
+        val bitmap: Bitmap = MediaStore.Images.Media.getBitmap(this.contentResolver, resultUri)
+        mPhotoEditorView?.source?.setImageBitmap(bitmap);
+      }
+      UCrop.RESULT_ERROR -> handleCropError(result.mResultData)
+    }
+    supportFragmentManager.beginTransaction()
+      .remove(cropFragment!!)
+      .commit()
+    showAll()
+  }
+
   private fun showBottomSheetDialogFragment(fragment: BottomSheetDialogFragment?) {
     if (fragment == null || fragment.isAdded) {
       return
     }
     fragment.show(supportFragmentManager, fragment.tag)
+  }
+
+  fun hideAll(showLoader: Boolean) {
+    mPhotoEditorView!!.visibility = View.GONE
+    mRvTools!!.visibility = View.GONE
   }
 
   fun showFilter(isVisible: Boolean) {
