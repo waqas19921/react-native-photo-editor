@@ -21,6 +21,7 @@ import android.view.WindowManager
 import android.view.animation.AnticipateOvershootInterpolator
 import android.widget.Button
 import android.widget.ImageView
+import android.widget.RelativeLayout
 import android.widget.TextView
 import androidx.annotation.NonNull
 import androidx.annotation.RequiresApi
@@ -30,6 +31,7 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -81,6 +83,8 @@ open class PhotoEditorActivity : AppCompatActivity(), OnPhotoEditorListener, Vie
   private var mIsFilterVisible = false
   private var imgPath: String? = ""
   private var cropFragment: UCropFragment? = null
+  private var mIsCropVisible = false
+  private var mIsCropSetup = false
 
   @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
   override fun onCreate(savedInstanceState: Bundle?) {
@@ -158,7 +162,14 @@ open class PhotoEditorActivity : AppCompatActivity(), OnPhotoEditorListener, Vie
         }
       })
 //      .placeholder(drawable)
-      .into(mPhotoEditorView!!.source);
+      .into(mPhotoEditorView!!.source)
+
+    val uCrop: UCrop? = UCrop.of(Uri.fromFile(File(imgPath!!)), Uri.fromFile(File(getTmpDir(), "TempCropImage.jpg")))
+    cropFragment = uCrop?.getFragment(uCrop.getIntent(this).extras)
+    supportFragmentManager.beginTransaction()
+      .replace(R.id.fragment_container, cropFragment!!, UCropFragment.TAG)
+      .hide(cropFragment!!)
+      .commitAllowingStateLoss()
   }
 
   private fun showLoading(message: String) {
@@ -258,15 +269,15 @@ open class PhotoEditorActivity : AppCompatActivity(), OnPhotoEditorListener, Vie
         mPhotoEditor!!.redo()
       }
       R.id.btnSave -> {
-        if (cropFragment != null) {
+        if (mIsCropVisible) {
           cropFragment?.cropAndSaveImage();
         } else {
           saveImage()
         }
       }
       R.id.imgClose -> {
-        if (cropFragment != null) {
-          removeCropFromScreen()
+        if (mIsCropVisible) {
+          hideCropFragment()
         } else {
           onBackPressed()
         }
@@ -373,17 +384,11 @@ open class PhotoEditorActivity : AppCompatActivity(), OnPhotoEditorListener, Vie
         }
       }
       ToolType.CROP -> {
-        var destinationFileName: String = "SampleCropImage.jpg"
-
-        var uCrop: UCrop? = UCrop.of(Uri.fromFile(File(imgPath)), Uri.fromFile(File(getTmpDir(), destinationFileName)))
-
-//                uCrop = basisConfig(uCrop)
-//                uCrop = advancedConfig(uCrop)
-        cropFragment = uCrop?.getFragment(uCrop.getIntent(this).extras)
-        supportFragmentManager.beginTransaction()
-          .add(R.id.fragment_container, cropFragment!!, UCropFragment.TAG)
-          .commitAllowingStateLoss()
-        hideAll()
+        if (mIsCropVisible) {
+          hideCropFragment()
+        } else {
+          showCropFragment()
+        }
       }
       ToolType.ERASER -> {
         mPhotoEditor!!.brushEraser()
@@ -397,14 +402,32 @@ open class PhotoEditorActivity : AppCompatActivity(), OnPhotoEditorListener, Vie
     }
   }
 
-  open fun hideAll() {
+  open fun showCropFragment() {
+    mIsCropVisible = true
     mPhotoEditorView!!.visibility = View.GONE
     mRvTools!!.visibility = View.GONE
     findViewById<ImageView>(R.id.imgRedo)!!.visibility = View.GONE
     findViewById<ImageView>(R.id.imgUndo)!!.visibility = View.GONE
+    supportFragmentManager.beginTransaction()
+      .show(cropFragment!!)
+      .commit()
+    if (mIsCropSetup) {
+      val cropLayout = cropFragment?.view?.findViewById<RelativeLayout>(R.id.ucrop_photobox)
+        val childView = cropLayout?.getChildAt(2)
+        Log.d(TAG, "Child view id = " + childView?.id)
+        val isClickable = childView?.isClickable
+        if (isClickable == true) {
+          childView.isClickable = false
+        }
+    }
+    mIsCropSetup = true
   }
 
-  open fun showAll() {
+  open fun hideCropFragment() {
+    mIsCropVisible = false
+    supportFragmentManager.beginTransaction()
+      .hide(cropFragment!!)
+      .commit()
     mPhotoEditorView!!.visibility = View.VISIBLE
     mRvTools!!.visibility = View.VISIBLE
     findViewById<ImageView>(R.id.imgRedo)!!.visibility = View.VISIBLE
@@ -427,14 +450,6 @@ open class PhotoEditorActivity : AppCompatActivity(), OnPhotoEditorListener, Vie
     }
   }
 
-  open fun removeCropFromScreen() {
-    supportFragmentManager.beginTransaction()
-      .remove(cropFragment!!)
-      .commit()
-    cropFragment = null
-    showAll()
-  }
-
   override fun loadingProgress(showLoader: Boolean) {
     Log.d(TAG, "Loading triggered.")
   }
@@ -449,10 +464,7 @@ open class PhotoEditorActivity : AppCompatActivity(), OnPhotoEditorListener, Vie
       }
       UCrop.RESULT_ERROR -> handleCropError(result.mResultData)
     }
-    supportFragmentManager.beginTransaction()
-      .remove(cropFragment!!)
-      .commit()
-    showAll()
+    hideCropFragment()
   }
 
   private fun showBottomSheetDialogFragment(fragment: BottomSheetDialogFragment?) {
@@ -500,6 +512,8 @@ open class PhotoEditorActivity : AppCompatActivity(), OnPhotoEditorListener, Vie
       mTxtCurrentTool!!.setText(R.string.app_name)
     } else if (!mPhotoEditor!!.isCacheEmpty) {
       showSaveDialog()
+    } else if (mIsCropVisible) {
+      hideCropFragment()
     } else {
       onCancel()
     }
