@@ -76,7 +76,7 @@ open class PhotoEditorActivity : AppCompatActivity(), OnPhotoEditorListener, Vie
   private var mTxtCurrentTool: TextView? = null
   private var mRvTools: RecyclerView? = null
   private var mRvFilters: RecyclerView? = null
-  private val mEditingToolsAdapter = EditingToolsAdapter(this)
+  private var mEditingToolsAdapter: EditingToolsAdapter? = null
   private val mFilterViewAdapter = FilterViewAdapter(this)
   private var mRootView: ConstraintLayout? = null
   private val mConstraintSet = ConstraintSet()
@@ -105,6 +105,10 @@ open class PhotoEditorActivity : AppCompatActivity(), OnPhotoEditorListener, Vie
 //    for (stick in stickers) {
 //      print("stick: $stickers")
 //    }
+
+    val hideControls =
+      value?.getStringArrayList("hideControls")
+    mEditingToolsAdapter = EditingToolsAdapter(this, hideControls)
 
     mPropertiesBSFragment = PropertiesBSFragment()
     mPropertiesBSFragment!!.setPropertiesChangeListener(this)

@@ -31,9 +31,11 @@ class PhotoEditorModule(reactContext: ReactApplicationContext) : ReactContextBas
 
     val path = options?.getString("path")
     val stickers = options?.getArray("stickers") as ReadableArray
+    val hideControls = options?.getArray("hideControls") as ReadableArray
 
     intent.putExtra("path", path)
     intent.putExtra("stickers", stickers.toArrayList())
+    intent.putExtra("hideControls", hideControls.toArrayList())
 
     activity.startActivityForResult(intent, EDIT_SUCCESSFUL)
   }

@@ -60,7 +60,27 @@ class PhotoEditor: NSObject, ZLEditImageControllerDelegate {
         //Config
         ZLImageEditorConfiguration.default().editDoneBtnBgColor = UIColor(red:255/255.0, green:238/255.0, blue:101/255.0, alpha:1.0)
 
-        ZLImageEditorConfiguration.default().editImageTools = [.draw, .clip, .filter, .imageSticker, .textSticker]
+        let hideControls = options["hideControls"] as? [String] ?? []
+        var editImageTools = [] as [ZLImageEditorConfiguration.EditImageTool]
+        if (!hideControls.contains("Shape")) {
+            editImageTools.append(.draw)
+        }
+        if (!hideControls.contains("Crop")) {
+            editImageTools.append(.clip)
+        }
+        if (!hideControls.contains("Filter")) {
+            editImageTools.append(.filter)
+        }
+        if (!hideControls.contains("Sticker")) {
+            editImageTools.append(.imageSticker)
+        }
+        if (!hideControls.contains("Text")) {
+            editImageTools.append(.textSticker)
+        }
+        if (!hideControls.contains("Mosaic")) {
+            editImageTools.append(.mosaic)
+        }
+        ZLImageEditorConfiguration.default().editImageTools = editImageTools
         
         //Filters Lut
         do {

@@ -6,6 +6,7 @@ let exportObject = {};
 const defaultOptions = {
   path: '',
   stickers: [],
+  hideControls: [],
 };
 
 exportObject = {
@@ -21,7 +22,7 @@ exportObject = {
           resolve(response);
           return true;
         }
-        throw 'ERROR_UNKNOW';
+        throw 'ERROR_UNKNOWN';
       } catch (e) {
         reject(e);
       }
