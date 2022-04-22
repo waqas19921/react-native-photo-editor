@@ -19,10 +19,7 @@ import android.view.View
 import android.view.Window
 import android.view.WindowManager
 import android.view.animation.AnticipateOvershootInterpolator
-import android.widget.Button
-import android.widget.ImageView
-import android.widget.RelativeLayout
-import android.widget.TextView
+import android.widget.*
 import androidx.annotation.NonNull
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AlertDialog
@@ -84,6 +81,7 @@ open class PhotoEditorActivity : AppCompatActivity(), OnPhotoEditorListener, Vie
   private var imgPath: String? = ""
   private var cropFragment: UCropFragment? = null
   private var mIsCropVisible = false
+  private var isShowCropLoading = false
   private var mIsCropSetup = false
 
   @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
@@ -168,6 +166,7 @@ open class PhotoEditorActivity : AppCompatActivity(), OnPhotoEditorListener, Vie
 //      .placeholder(drawable)
       .into(mPhotoEditorView!!.source)
 
+    isShowCropLoading = false
     val uCrop: UCrop? = UCrop.of(Uri.fromFile(File(imgPath!!)), Uri.fromFile(File(getTmpDir(), "TempCropImage.jpg")))
     cropFragment = uCrop?.getFragment(uCrop.getIntent(this).extras)
     supportFragmentManager.beginTransaction()
@@ -274,7 +273,8 @@ open class PhotoEditorActivity : AppCompatActivity(), OnPhotoEditorListener, Vie
       }
       R.id.btnSave -> {
         if (mIsCropVisible) {
-          cropFragment?.cropAndSaveImage();
+          isShowCropLoading = true
+          cropFragment?.cropAndSaveImage()
         } else {
           saveImage()
         }
@@ -448,14 +448,19 @@ open class PhotoEditorActivity : AppCompatActivity(), OnPhotoEditorListener, Vie
     val cropError = UCrop.getError(result)
     if (cropError != null) {
       Log.e(TAG, "handleCropError: ", cropError)
-//      Toast.makeText(this@SampleActivity, cropError.message, Toast.LENGTH_LONG).show()
-    } else {
-//      Toast.makeText(this@SampleActivity, R.string.toast_unexpected_error, Toast.LENGTH_SHORT).show()
     }
+    hideCropFragment()
+    Toast.makeText(this, "Unable to crop image. Something went wrong.", Toast.LENGTH_SHORT).show()
   }
 
   override fun loadingProgress(showLoader: Boolean) {
-    Log.d(TAG, "Loading triggered.")
+    if (isShowCropLoading && showLoader) {
+      Log.d(TAG, "Loading triggered.")
+      showLoading("Cropping...")
+    } else if(isShowCropLoading) {
+      isShowCropLoading = false
+      hideLoading()
+    }
   }
 
   override fun onCropFinish(result: UCropResult) {
@@ -476,11 +481,6 @@ open class PhotoEditorActivity : AppCompatActivity(), OnPhotoEditorListener, Vie
       return
     }
     fragment.show(supportFragmentManager, fragment.tag)
-  }
-
-  fun hideAll(showLoader: Boolean) {
-    mPhotoEditorView!!.visibility = View.GONE
-    mRvTools!!.visibility = View.GONE
   }
 
   fun showFilter(isVisible: Boolean) {
