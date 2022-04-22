@@ -1,3 +1,4 @@
+###Note: This is fork for adding crop functionality in android and added hide controls option. Also fixed input not showing and file save issue on android.
 # React Native Photo Editor (RNPE)
 
 🌄 Image editor using native modules for iOS and Android. Inherit from 2 available libraries, [ZLImageEditor](https://github.com/longitachi/ZLImageEditor) (iOS) and [PhotoEditor](https://github.com/burhanrashid52/PhotoEditor) (Android)
@@ -32,6 +33,7 @@ This lib is for personal use, so if you customize your style or change something
 ### Android
 - Drawing on image with option to change its Brush's Color, Size, Opacity, Erasing and basic shapes.
 - Apply Filter Effect on image using [MediaEffect](https://developer.android.com/reference/android/media/effect/EffectFactory). But in the future will change to LUT color.
+- Crop image added using [uCrop library](https://github.com/Yalantis/uCrop) thanks to uCrop library
 
 ## Video Demo 📺
 | iOS |  Android  |
@@ -91,10 +93,11 @@ const result = await PhotoEditor.open(Options);
 ```
 ## Options
 
-| Property |  Type  | Default value | Platform | Description      |
-| -------- | :----: | :-----------: | :------: | :--------------- |
-| path      | string |   required    |   both   | Local/remote image path |
-| [stickers](#stickers-)      | Array<String> |   []    |   both   | An array of paths containing sticker images |
+| Property                       |  Type  | Default value | Platform | Description                                                                                                                          |
+|--------------------------------| :----: | :-----------: | :------: |:-------------------------------------------------------------------------------------------------------------------------------------|
+| path                           | string |   required    |   both   | Local/remote image path                                                                                                              |
+| [stickers](#stickers-)         | Array<String> |   []    |   both   | An array of paths containing sticker images                                                                                          |
+| [hideControls](#hideControls-) | Array<String> |   []    |   both   | An array of control values that need to be hidden. Options are 'Shape', 'Eraser' , 'Crop' , 'Filter' , 'Sticker' , 'Text' , 'Mosaic' |
 
 ## Filters 🌈
 | iOS | Android |
@@ -118,14 +121,14 @@ You have to create ```LUTs.bundle``` and add all your LUT Photo(Re-name your LUT
 ## Stickers 🤌
 ### Remote
 You need to pass an array of image urls to the sticker parameter in [options](#options)
-[Example](https://github.com/baronha/react-native-photo-editor/blob/dev/example/src/assets/data/stickers.json): 
+[Example](https://github.com/baronha/react-native-photo-editor/blob/dev/example/src/assets/data/stickers.json):
 ```
 [
   "https://cdn-icons-png.flaticon.com/512/5272/5272912.png",
   "https://cdn-icons-png.flaticon.com/512/5272/5272913.png",
   "https://cdn-icons-png.flaticon.com/512/5272/5272916.png",
   ...
-] 
+]
 ```
 ### Local
 
@@ -135,9 +138,9 @@ You have to create ```Stickers.bundle``` and add all your sticker into ```Sticke
     <br>
     <br>
 ![](resources/sticker_tutorial_ios.png)
-  
+
 #### Android
-You have to create ```Stickers``` folder inside ```assets``` folder. Then drag or copy all sticker in to ```Sticker``` folder. 
+You have to create ```Stickers``` folder inside ```assets``` folder. Then drag or copy all sticker in to ```Sticker``` folder.
   [See detail](https://github.com/baronha/react-native-photo-editor/tree/master/example/android/app/src/main/assets/Stickers)
   <br>
    <br>
