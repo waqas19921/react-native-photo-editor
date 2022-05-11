@@ -12,7 +12,6 @@ import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.os.Environment
 import android.provider.MediaStore
 import android.util.Log
 import android.view.View
@@ -28,8 +27,6 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.fragment.app.Fragment
-import androidx.fragment.app.FragmentActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.transition.ChangeBounds
@@ -78,7 +75,6 @@ open class PhotoEditorActivity : AppCompatActivity(), OnPhotoEditorListener, Vie
   private var mRootView: ConstraintLayout? = null
   private val mConstraintSet = ConstraintSet()
   private var mIsFilterVisible = false
-  private var imgPath: String? = ""
   private var cropFragment: UCropFragment? = null
   private var mIsCropVisible = false
   private var isShowCropLoading = false
@@ -94,7 +90,6 @@ open class PhotoEditorActivity : AppCompatActivity(), OnPhotoEditorListener, Vie
     //intern
     val value = intent.extras
     val path = value?.getString("path")
-    imgPath = path
     val stickers =
       value?.getStringArrayList("stickers")?.plus(
         assets.list("Stickers")!!
@@ -167,7 +162,8 @@ open class PhotoEditorActivity : AppCompatActivity(), OnPhotoEditorListener, Vie
       .into(mPhotoEditorView!!.source)
 
     isShowCropLoading = false
-    val uCrop: UCrop? = UCrop.of(Uri.fromFile(File(imgPath!!)), Uri.fromFile(File(getTmpDir(), "TempCropImage.jpg")))
+    val imgUri = if (path?.startsWith("http") == true) Uri.parse(path) else Uri.fromFile(File(path!!))
+    val uCrop: UCrop? = UCrop.of(imgUri, Uri.fromFile(File(getTmpDir(), "TempCropImage.jpg")))
     cropFragment = uCrop?.getFragment(uCrop.getIntent(this).extras)
     supportFragmentManager.beginTransaction()
       .replace(R.id.fragment_container, cropFragment!!, UCropFragment.TAG)
